@@ -10,8 +10,30 @@ Arduino MEGA
 EZ Kontrol Motor
 
 
-Component,Wire Color,Arduino Pin,Function
-RP3 Receiver TX,Yellow/White,Pin 2,CRSF Signal In
-A48 Throttle,Green/White,Pin 9,0-5V Signal Out
-A48 Reverse,Blue/Yellow,Pin 11,Direction Toggle
-Common GND,Black,GND,Signal Ground Reference
+| Component | Arduino Uno Pin | EZKontrol Wire | Function |
+| :--- | :--- | :--- | :--- |
+| **Throttle Signal** | Pin 9 (PWM) | Green/White | Speed Control (0-5V) |
+| **Reverse Signal** | Pin 11 | Blue/Yellow | Direction Toggle |
+| **Receiver (TX)** | Pin 2 | Yellow | CRSF Data In |
+| **Common Ground** | GND | Black | Signal Reference |
+
+Power Domains
+It is vital to keep the "Logic World" and "Power World" separate to protect your electronics.
+
+Logic (5V): Powers the Arduino and RP3 receiver.
+
+Power (48V+): Feeds the EZKontrol A48 and the motor.
+
+Safety: The high-power motor current does not go through the Arduino.
+
+Setup & Safety Checklist 
+
+Before powering the motor, verify the following:
+
+[ ] RP3 Power: Receiver is powered by the Arduino 5V pin.
+
+[ ] Serial Wires: RP3 TX is connected to the Arduino RX pin.
+
+[ ] Common GND: Arduino GND is connected to the EZKontrol logic ground.
+
+[ ] Throttle Safety: Ensure the RC stick is at zero before powering the A48 to avoid safety lockouts.
