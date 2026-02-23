@@ -3,6 +3,7 @@
 // Arduino Mega 2560 + RP3 (CRSF)
 //
 // RIGHT STICK LEFT/RIGHT = steering (Talon SRX, brushed 12V)
+// PINS 2/3 = quadrature encoder on steering (position feedback)
 // RIGHT STICK UP         = forward throttle (BLDC 48V)
 // RIGHT STICK DOWN       = reverse throttle
 // SD SWITCH (hold)       = brake + kill throttle
@@ -26,6 +27,8 @@
 #define REVERSE_PIN     4     // EZkontrol reverse signal
 #define BRAKE_PIN       5     // Brake L white wire (LOW = brake ON)
 #define STEERING_PIN    9     // Talon SRX PWM signal
+#define ENCODER_A_PIN   2     // Steering quadrature encoder A
+#define ENCODER_B_PIN   3     // Steering quadrature encoder B
 
 // ----- CHANNELS (0-indexed) -----
 #define THROTTLE_CH     1     // CH2 = right stick up/down
@@ -71,6 +74,21 @@ bool reverseActive = false;
 unsigned long lastPrintMs = 0;
 
 Servo steeringServo;
+
+// ----- STEERING ENCODER (quadrature on A/B) -----
+volatile long encoderCount = 0;
+
+void isrEncoderA() {
+    bool A = digitalRead(ENCODER_A_PIN);
+    bool B = digitalRead(ENCODER_B_PIN);
+    encoderCount += (A == B) ? +1 : -1;
+}
+
+void isrEncoderB() {
+    bool A = digitalRead(ENCODER_A_PIN);
+    bool B = digitalRead(ENCODER_B_PIN);
+    encoderCount += (A != B) ? +1 : -1;
+}
 
 // ============================================================
 uint8_t crsf_crc8(const uint8_t *data, uint8_t len) {
@@ -181,13 +199,18 @@ void setup() {
     steeringServo.attach(STEERING_PIN);
     steeringServo.writeMicroseconds(STEERING_CENTER_US);  // Center on boot
 
+    pinMode(ENCODER_A_PIN, INPUT_PULLUP);
+    pinMode(ENCODER_B_PIN, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(ENCODER_A_PIN), isrEncoderA, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(ENCODER_B_PIN), isrEncoderB, CHANGE);
+
     Serial.begin(115200);
     CRSF_SERIAL.begin(CRSF_BAUDRATE);
 
     Serial.println("=== RC GO-KART FULL CONTROL ===");
     Serial.println("Brake ON until CRSF signal acquired.");
     Serial.println("Right stick UP/DOWN  = throttle/reverse");
-    Serial.println("Right stick L/R      = steering");
+    Serial.println("Right stick L/R      = steering (encoder on D2/D3)");
     Serial.println("SD switch (hold)     = brake");
     Serial.println("Signal lost          = brake");
     Serial.print("Max throttle PWM: "); Serial.print(MAX_PWM);
@@ -258,8 +281,13 @@ void loop() {
         }
         if (millis() - lastPrintMs >= 200) {
             lastPrintMs = millis();
+            long enc;
+            noInterrupts();
+            enc = encoderCount;
+            interrupts();
             Serial.print("CH2="); Serial.print(raw);
-            Serial.print("  [CENTER]  CH1="); Serial.println(steerRaw);
+            Serial.print("  [CENTER]  CH1="); Serial.print(steerRaw);
+            Serial.print("  enc="); Serial.println(enc);
         }
         return;
     }
@@ -291,12 +319,17 @@ void loop() {
     // Debug
     if (millis() - lastPrintMs >= 200) {
         lastPrintMs = millis();
+        long enc;
+        noInterrupts();
+        enc = encoderCount;
+        interrupts();
         Serial.print("CH2="); Serial.print(raw);
         Serial.print("  dir="); Serial.print(reverseActive ? "REV" : "FWD");
         Serial.print("  tgt="); Serial.print(targetPWM);
         Serial.print("  cur="); Serial.print(currentPWM);
         Serial.print("  ~"); Serial.print((currentPWM / 255.0) * 5.0, 2);
         Serial.print("V  CH1="); Serial.print(steerRaw);
+        Serial.print("  enc="); Serial.print(enc);
         Serial.print("  CH7="); Serial.println(channels[BRAKE_CH]);
     }
 }
