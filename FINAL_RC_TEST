@@ -63,8 +63,8 @@
 // THROTTLE CONFIGURATION (proven working values)
 // =============================================================
 #define THROTTLE_DEADBAND     30
-#define THROTTLE_MAX_PWM      51     // ~1.0V cap. Increase gradually.
-#define THROTTLE_MIN_PWM      30     // ~0.6V floor.
+#define THROTTLE_MAX_PWM      255     // changed to max PWM value (was before 51)
+#define THROTTLE_MIN_PWM      51     // ~1.0V floor.
 #define THROTTLE_RAMP_STEP    1
 #define INVERT_DIRECTION      true   // Stick up = forward (proven)
 
